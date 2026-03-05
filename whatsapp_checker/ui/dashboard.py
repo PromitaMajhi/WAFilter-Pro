@@ -320,6 +320,11 @@ class Dashboard(QMainWindow):
                 self.logs.addItem(f"Error loading file: {e}")
 
     def start_checking(self):
+        if not self.numbers:
+            self.logs.addItem("❌ Error: No numbers loaded. Please upload a file first.")
+            return
+
+        self.logs.addItem("Starting session... Please scan QR code in the browser window.")
         self.start_btn.setEnabled(False)
         self.stop_btn.setEnabled(True)
         self.valid_count = 0
@@ -328,11 +333,18 @@ class Dashboard(QMainWindow):
         self.table.setRowCount(0)
         self.progress_bar.setValue(0)
         
-        self.worker = WorkerThread(self.numbers, self.checker)
-        self.worker.progress_signal.connect(self.update_progress)
-        self.worker.log_signal.connect(lambda msg: self.logs.addItem(msg))
-        self.worker.finished_signal.connect(self.checking_finished)
-        self.worker.start()
+        try:
+            self.worker = WorkerThread(self.numbers, self.checker)
+            self.worker.progress_signal.connect(self.update_progress)
+            self.worker.log_signal.connect(lambda msg: self.logs.addItem(msg))
+            self.worker.finished_signal.connect(self.checking_finished)
+            self.worker.error_signal = pyqtSignal(str) # For future use
+            self.worker.start()
+        except Exception as e:
+            self.logs.addItem(f"❌ Execution Error: {str(e)}")
+            self.start_btn.setEnabled(True)
+            self.stop_btn.setEnabled(False)
+
 
     def update_progress(self, current, total, number, status):
         # Update progress bar
