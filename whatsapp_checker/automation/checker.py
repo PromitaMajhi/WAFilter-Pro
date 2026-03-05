@@ -50,32 +50,33 @@ class WhatsAppChecker:
               "div:contains('invalid')"
             ]
             
-            # WhatsApp uses specific elements for message boxes vs invalid alerts
-            # Wait for either:
-            # 1. The message box (contenteditable='true') -> Valid
-            # 2. An 'OK' button on an error modal or 'Phone number shared via url is invalid' -> Invalid
-            
-            # Using dynamic waits for better reliability
+            # WhatsApp Web load indicators vary
             try:
-                # Wait for either condition
+                # Wait for any sign of completion (either valid message box or invalid alert)
+                # Check for 3 main states:
+                # 1. Message input box (Valid)
+                # 2. "Phone number is invalid" text (Invalid)
+                # 3. An 'OK' button on a popup (Invalid)
+                
                 WebDriverWait(self.driver, 20).until(
                     lambda d: d.find_elements(By.CSS_SELECTOR, "div[contenteditable='true']") or 
                              "invalid" in d.page_source.lower() or
-                             d.find_elements(By.XPATH, "//*[contains(text(), 'OK')]")
+                             d.find_elements(By.CSS_SELECTOR, "div[role='button']")
                 )
                 
-                # Check for invalid message first
-                page_source = self.driver.page_source.lower()
-                if "invalid" in page_source or "not shared via url" in page_source:
+                time.sleep(1) # Final check buffer
+                source = self.driver.page_source.lower()
+                
+                if "invalid" in source or "not shared via url" in source:
                     return False
                 
-                # If message box is present, it's valid
                 if self.driver.find_elements(By.CSS_SELECTOR, "div[contenteditable='true']"):
                     return True
                 
                 return False 
             except Exception:
                 return False
+
 
 
         except Exception as e:
